@@ -39,7 +39,7 @@ namespace TwoBitMachines.FlareEngine.ThePlayer
                         isFlippingRight = false;
                 }
 
-                public void Flip (AbilityManager player, LadderClimb ladderClimb, Ladder ladder, ref Vector2 velocity)
+                public void Flip (AbilityManager player, LadderClimb ladderClimb, TwoBitMachines.FlareEngine.Interactables.Ladder ladder, ref Vector2 velocity)
                 {
                         if (!ladder.canFlip || Time.deltaTime == 0)
                         {
