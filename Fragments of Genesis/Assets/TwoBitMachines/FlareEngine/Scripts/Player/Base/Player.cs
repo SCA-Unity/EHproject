@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TwoBitMachines.Safire2DCamera.TestMode;
 using UnityEngine;
 
 namespace TwoBitMachines.FlareEngine.ThePlayer
@@ -15,6 +16,7 @@ namespace TwoBitMachines.FlareEngine.ThePlayer
 
                 public static Player mainPlayer;
                 public static List<Player> players = new List<Player>();
+
 
                 #region ▀▄▀▄▀▄ Editor Variables ▄▀▄▀▄▀
 #if UNITY_EDITOR
@@ -44,6 +46,7 @@ namespace TwoBitMachines.FlareEngine.ThePlayer
                         world.Initialize(transform);
                         signals.InitializeToSpriteEngine(transform);
                         abilities.Initialize(this, inputs, ability, this);
+                        
                 }
 
                 public override void OnEnable ()
@@ -196,5 +199,7 @@ namespace TwoBitMachines.FlareEngine.ThePlayer
                 {
                         abilities.ResetAll();
                 }
+
+                
         }
 }

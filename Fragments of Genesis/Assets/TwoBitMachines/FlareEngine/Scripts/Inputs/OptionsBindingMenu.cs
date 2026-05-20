@@ -29,6 +29,16 @@ namespace TwoBitMachines.FlareEngine
                   SetResolution ( );
             }
 
+            private static int GetRefreshRateHz (Resolution resolution)
+            {
+                  // Resolution.refreshRate is obsolete; use refreshRateRatio instead.
+                  // Convert numerator/denominator fraction into an integer Hz for UI + PlayerPrefs.
+                  var rr = resolution.refreshRateRatio;
+                  if (rr.denominator == 0)
+                        return 0;
+                  return Mathf.RoundToInt ((float) rr.numerator / (float) rr.denominator);
+            }
+
             public void OnEnable ( ) // for saving new input values
             {
                   var rebinds = PlayerPrefs.GetString ("rebinds");
@@ -68,7 +78,7 @@ namespace TwoBitMachines.FlareEngine
                   System.Array.Sort (res, (x, y) =>
                   {
                         // Sort by refresh rate first
-                        int refreshRateComparison = x.refreshRate.CompareTo (y.refreshRate);
+                        int refreshRateComparison = GetRefreshRateHz (x).CompareTo (GetRefreshRateHz (y));
                         if (refreshRateComparison != 0)
                         {
                               return refreshRateComparison;
@@ -85,14 +95,15 @@ namespace TwoBitMachines.FlareEngine
                   });
 
                   int current = 0;
-                  int refreshRate = PlayerPrefs.GetInt ("RefreshRateTBM", Screen.currentResolution.refreshRate);
+                  int refreshRate = PlayerPrefs.GetInt ("RefreshRateTBM", GetRefreshRateHz (Screen.currentResolution));
                   List<string> options = new List<string> ( );
                   for (int i = 0; i < res.Length; i++)
                   {
-                        string option = res[i].width + " x " + res[i].height + " @ " + res[i].refreshRate;
+                        int hz = GetRefreshRateHz (res[i]);
+                        string option = res[i].width + " x " + res[i].height + " @ " + hz;
                         options.Add (option);
 
-                        if (res[i].width == Screen.width && res[i].height == Screen.height && res[i].refreshRate == refreshRate)
+                        if (res[i].width == Screen.width && res[i].height == Screen.height && GetRefreshRateHz (res[i]) == refreshRate)
                         {
                               current = i;
                         }
@@ -105,8 +116,20 @@ namespace TwoBitMachines.FlareEngine
             public void SetResolution (int index)
             {
                   Resolution resolution = res[index];
-                  Screen.SetResolution (resolution.width, resolution.height, PlayerPrefs.GetInt ("IsFullScreen") <= 0 ? true : false, resolution.refreshRate);
-                  PlayerPrefs.SetInt ("RefreshRateTBM", resolution.refreshRate);
+                  bool isFullScreen = PlayerPrefs.GetInt ("IsFullScreen") <= 0 ? true : false;
+                  int hz = GetRefreshRateHz (resolution);
+
+                  // Refresh rate switching is only supported for exclusive fullscreen.
+                  if (isFullScreen)
+                  {
+                        Screen.SetResolution (resolution.width, resolution.height, FullScreenMode.ExclusiveFullScreen, resolution.refreshRateRatio);
+                  }
+                  else
+                  {
+                        Screen.SetResolution (resolution.width, resolution.height, false);
+                  }
+
+                  PlayerPrefs.SetInt ("RefreshRateTBM", hz);
             }
 
             public void ResetAll ( )

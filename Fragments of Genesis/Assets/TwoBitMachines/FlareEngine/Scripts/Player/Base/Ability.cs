@@ -47,6 +47,16 @@ namespace TwoBitMachines.FlareEngine.ThePlayer
 
                 }
 
+                // Some abilities are added via code/editor tools. When this happens, abilityName can be left empty,
+                // which breaks exception/priority checks that compare by abilityName string.
+                protected virtual void Awake ()
+                {
+                        if (string.IsNullOrEmpty(abilityName))
+                        {
+                                abilityName = GetType().Name;
+                        }
+                }
+
                 public virtual void Reset (AbilityManager player)
                 {
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using TwoBitMachines.FlareEngine.AI;
 using UnityEngine;
 
 public abstract class PlayerController :MonoBehaviour
@@ -16,28 +15,12 @@ public abstract class PlayerController :MonoBehaviour
     public Rigidbody2D m_rigidbody;
     protected CapsuleCollider2D m_CapsulleCollider;
     protected Animator m_Anim;
-    private PlayerHealth playerHealth;
-    private float moveInput;
 
     [Header("[Setting]")]
     public float MoveSpeed = 6;
     public int JumpCount = 2;
     public float jumpForce = 15f;
 
-    void Update()
-    {
-        if (playerHealth != null && playerHealth.IsKnockback())
-            return; // 넉백 중이면 입력 무시
-
-        moveInput = Input.GetAxisRaw("Horizontal");
-    }
-    void FixedUpdate()
-    {
-        if (playerHealth != null && playerHealth.IsKnockback())
-            return;
-
-        m_rigidbody.velocity = new Vector2(moveInput * MoveSpeed, m_rigidbody.velocity.y);
-    }
     protected void AnimUpdate()
     {
 

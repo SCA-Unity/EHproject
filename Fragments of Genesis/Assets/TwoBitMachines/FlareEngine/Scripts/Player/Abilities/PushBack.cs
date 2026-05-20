@@ -9,7 +9,7 @@ using UnityEngine.Events;
 
 namespace TwoBitMachines.FlareEngine.ThePlayer
 {
-        [AddComponentMenu("")]
+        [AddComponentMenu("Flare Engine/Player/Abilities/PushBack")]
         public class PushBack : Ability
         {
                 [SerializeField] public float distanceX = 2;

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Text;
@@ -279,9 +279,9 @@ namespace TwoBitMachines
                                         files.AddRange(DirectorySearch(d));
                                 }
                         }
-                        catch (System.Exception excpt)
+                        catch (System.Exception)
                         {
-                                //Debug.Log(excpt.Message);
+                                // Intentionally swallow IO exceptions during directory traversal.
                         }
 
                         return files;

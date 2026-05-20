@@ -1,39 +1,41 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using TwoBitMachines.FlareEngine.AI;
 using UnityEngine;
-
-
 
 public class Swordman : PlayerController
 {
-    private PlayerHealth playerHealth;
-    private float moveInput;
 
+ 
 
-    
     private void Start()
     {
 
         m_CapsulleCollider  = this.transform.GetComponent<CapsuleCollider2D>();
         m_Anim = this.transform.Find("model").GetComponent<Animator>();
         m_rigidbody = this.transform.GetComponent<Rigidbody2D>();
-
+  
 
     }
 
 
 
-    /*private void Update()
+    private void Update()
     {
-        
+
+
+
+        checkInput();
+
         if (m_rigidbody.velocity.magnitude > 30)
         {
             m_rigidbody.velocity = new Vector2(m_rigidbody.velocity.x - 0.1f, m_rigidbody.velocity.y - 0.1f);
 
         }
 
-    }*/
+
+
+
+    }
 
     public void checkInput()
     {

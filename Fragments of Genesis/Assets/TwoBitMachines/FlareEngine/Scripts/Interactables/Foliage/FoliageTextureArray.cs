@@ -13,7 +13,9 @@ namespace TwoBitMachines.FlareEngine.Interactables
 
                 [SerializeField] public Mesh mesh;
                 [SerializeField] public Material material;
-                [SerializeField] public MaterialPropertyBlock property; //                                 not serializable
+                // MaterialPropertyBlock is not reliably serializable in Unity.
+                // Keep it runtime-only to avoid Unity serialization issues.
+                [System.NonSerialized] public MaterialPropertyBlock property;
                 [SerializeField] public List<FoliageTexture> textures = new List<FoliageTexture>(); //*  all Textures MUST be the same size
                 [SerializeField] public List<FoliageInstance> foliage = new List<FoliageInstance>();
                 [SerializeField] public Matrix4x4[] matrixList = new Matrix4x4[] { };
@@ -28,6 +30,9 @@ namespace TwoBitMachines.FlareEngine.Interactables
                         if (textures.Count == 0 || textures[0].texture == null)
                                 return false;
 
+                        Texture2D baseTexture = textures[0].texture;
+                        TextureFormat baseFormat = baseTexture.format;
+
                         for (int i = 0; i < textures.Count; i++)
                         {
                                 Texture2D texture = textures[i].texture;
@@ -39,6 +44,12 @@ namespace TwoBitMachines.FlareEngine.Interactables
                                 if (texture.width != textureSize.x || texture.height != textureSize.y)
                                 {
                                         Debug.LogWarning("Foliage could not create texture array. Texture " + texture.name + " is not of size " + textureSize + " but of size (" + texture.width + "," + texture.height + ")");
+                                        return false;
+                                }
+                                // Graphics.CopyTexture requires matching texture formats for the same array target.
+                                if (texture.format != baseFormat)
+                                {
+                                        Debug.LogWarning("Foliage could not create texture array. Texture " + texture.name + " has different format (" + texture.format + ") than base texture (" + baseFormat + ").");
                                         return false;
                                 }
                         }
@@ -124,6 +135,15 @@ namespace TwoBitMachines.FlareEngine.Interactables
 
                 public void Initialize ()
                 {
+                        // Optional: if enabled, build the texture array + instance buffers at runtime.
+                        if (createTexture)
+                        {
+                                if (GroupTextures())
+                                {
+                                        SetInstanceDataArrays();
+                                }
+                        }
+
                         CreatePropertyBlock();
                 }
 
@@ -144,6 +164,12 @@ namespace TwoBitMachines.FlareEngine.Interactables
                 {
                         if (SystemInfo.supportsInstancing && matrixList.Length > 0 && matrixList.Length < 1024 && material != null)
                         {
+                                if (property == null)
+                                {
+                                        property = new MaterialPropertyBlock();
+                                        // If Initialize() wasn't called, make a best-effort to populate arrays.
+                                        CreatePropertyBlock();
+                                }
                                 Graphics.DrawMeshInstanced(mesh, 0, material, matrixList, matrixList.Length, property, UnityEngine.Rendering.ShadowCastingMode.Off);
                         }
                 }
