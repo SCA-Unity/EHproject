@@ -16,6 +16,8 @@ public class AutoCheckpointZone : MonoBehaviour
 
     [Header("Options")]
     [SerializeField] private bool oneTimePerEntry = true;
+    [SerializeField] private bool respectCheckpointPriority = false;
+    [SerializeField] private bool logWhenSaved = true;
     [SerializeField] private UnityEvent onCheckpointSaved;
 
     private bool savedThisSession;
@@ -87,14 +89,28 @@ public class AutoCheckpointZone : MonoBehaviour
             return;
         }
 
-        if (checkPoint.type == CheckPoint.CheckPointType.Priority && checkpointIndex < GetCurrentIndex())
+        if (respectCheckpointPriority
+            && checkPoint.type == CheckPoint.CheckPointType.Priority
+            && checkpointIndex < GetCurrentIndex())
         {
+            if (logWhenSaved)
+            {
+                Debug.Log(
+                    $"{nameof(AutoCheckpointZone)} on {name} skipped save: index {checkpointIndex} is lower than saved index {GetCurrentIndex()}.",
+                    this);
+            }
+
             return;
         }
 
         entry.Save(checkPoint);
         savedThisSession = true;
         onCheckpointSaved?.Invoke();
+
+        if (logWhenSaved)
+        {
+            Debug.Log($"{nameof(AutoCheckpointZone)} on {name} saved checkpoint index {checkpointIndex}.", this);
+        }
     }
 
     private void SyncRespawnPoint()
@@ -129,9 +145,39 @@ public class AutoCheckpointZone : MonoBehaviour
 
     private int GetCurrentIndex()
     {
-        SaveFloat saveFloat = new SaveFloat { value = -1f };
+        SaveFloat saveFloat = new SaveFloat
+        {
+            value = checkPoint.hasDefault ? checkPoint.defaultIndex : -1f
+        };
         return (int)Storage.Load<SaveFloat>(saveFloat, WorldManager.saveFolder, checkPoint.checkPointName).value;
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (checkPoint == null || checkPoint.checkPoints == null)
+        {
+            return;
+        }
+
+        bool found = false;
+        for (int i = 0; i < checkPoint.checkPoints.Count; i++)
+        {
+            if (checkPoint.checkPoints[i].index == checkpointIndex)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            Debug.LogWarning(
+                $"{nameof(AutoCheckpointZone)} on {name}: CheckPoint has no entry with Index = {checkpointIndex}.",
+                this);
+        }
+    }
+#endif
 
     private Transform ResolveTargetTransform(Transform hitTransform, Transform rigidbodyTransform)
     {
