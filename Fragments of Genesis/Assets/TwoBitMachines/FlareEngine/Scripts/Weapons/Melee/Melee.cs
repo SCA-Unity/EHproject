@@ -23,6 +23,7 @@ namespace TwoBitMachines.FlareEngine
                 [System.NonSerialized] public bool inMelee = false;
                 [System.NonSerialized] private float coolDownCounter = 0;
                 [System.NonSerialized] private ThePlayer.Melee meleeRef;
+                [System.NonSerialized] private float flipDirection = 1f;
 
                 #region 
 #if UNITY_EDITOR
@@ -141,6 +142,7 @@ namespace TwoBitMachines.FlareEngine
                         }
 
                         inMelee = true;
+                        FlipCollider(direction);
 
                         if (coolDownCounter >= coolDown && melee.ExecuteMelee(signals, direction, onGround, crouching, position, coolDown, ref velocity))
                         {
@@ -150,9 +152,61 @@ namespace TwoBitMachines.FlareEngine
 
                 public void FlipCollider (float playerDirection)
                 {
-                        transform.localPosition = Util.FlipXSign(transform.localPosition, playerDirection); // change weapon position x depending on side
-                        Vector3 r = transform.localEulerAngles;
-                        transform.localRotation = Quaternion.Euler(r.x, playerDirection < 0 ? 180f : 0f, r.z);
+                        flipDirection = playerDirection < 0 ? -1f : 1f;
+                }
+
+                private void LateUpdate ()
+                {
+                        ApplyMeleeFacing(flipDirection);
+                }
+
+                private void ApplyMeleeFacing (float dir)
+                {
+                        Transform target = collider2DRef != null ? collider2DRef.transform : transform;
+                        bool onCharacter = target.GetComponent<Character>() != null;
+                        bool onSpriteEngine = target.GetComponent<TwoBitMachines.TwoBitSprite.SpriteEngineBase>() != null;
+                        bool canScaleTarget = !onCharacter && !onSpriteEngine;
+
+                        float parentSign = 1f;
+                        if (target.parent != null && target.parent.lossyScale.x < 0)
+                        {
+                                parentSign = -1f;
+                        }
+                        float localSign = dir * parentSign;
+
+                        Vector3 euler = target.localEulerAngles;
+                        if (canScaleTarget && Mathf.Abs(Mathf.DeltaAngle(euler.y, 0f)) > 0.01f)
+                        {
+                                target.localRotation = Quaternion.Euler(euler.x, 0f, euler.z);
+                        }
+
+                        if (collider2DRef != null && Mathf.Abs(collider2DRef.offset.x) > 0.0001f)
+                        {
+                                Vector2 offset = collider2DRef.offset;
+                                offset.x = Mathf.Abs(offset.x) * localSign;
+                                collider2DRef.offset = offset;
+                                if (canScaleTarget)
+                                {
+                                        Vector3 ls = target.localScale;
+                                        target.localScale = new Vector3(Mathf.Abs(ls.x) < 0.0001f ? 1f : Mathf.Abs(ls.x), ls.y, ls.z);
+                                }
+                                return;
+                        }
+
+                        if (!canScaleTarget)
+                        {
+                                return;
+                        }
+
+                        // Offset is ~0 (centered). Attack shapes in this project are drawn on the left,
+                        // so invert local scale after parent ScaleX so facing right still lands on the right.
+                        Vector3 scale = target.localScale;
+                        float absX = Mathf.Abs(scale.x);
+                        if (absX < 0.0001f)
+                        {
+                                absX = 1f;
+                        }
+                        target.localScale = new Vector3(absX * -localSign, scale.y, scale.z);
                 }
 
                 public void UnlockAll ()
