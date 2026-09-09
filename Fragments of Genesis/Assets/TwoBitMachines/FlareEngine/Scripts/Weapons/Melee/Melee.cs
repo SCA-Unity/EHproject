@@ -24,6 +24,9 @@ namespace TwoBitMachines.FlareEngine
                 [System.NonSerialized] private float coolDownCounter = 0;
                 [System.NonSerialized] private ThePlayer.Melee meleeRef;
                 [System.NonSerialized] private float flipDirection = 1f;
+                [System.NonSerialized] private float restLocalX = 0f;
+                [System.NonSerialized] private float restOffsetX = 0f;
+                [System.NonSerialized] private bool restCached = false;
 
                 #region 
 #if UNITY_EDITOR
@@ -38,7 +41,7 @@ namespace TwoBitMachines.FlareEngine
                 {
                         melee.Initialize(collider2DRef);
                         block.Initialize(collider2DRef);
-
+                        CacheHitboxRestPose();
                 }
 
                 public void ResetAll ()
@@ -153,60 +156,69 @@ namespace TwoBitMachines.FlareEngine
                 public void FlipCollider (float playerDirection)
                 {
                         flipDirection = playerDirection < 0 ? -1f : 1f;
+                        ApplyHitboxFlip(flipDirection);
                 }
 
                 private void LateUpdate ()
                 {
-                        ApplyMeleeFacing(flipDirection);
+                        ApplyHitboxFlip(flipDirection);
                 }
 
-                private void ApplyMeleeFacing (float dir)
+                private void CacheHitboxRestPose ()
                 {
-                        Transform target = collider2DRef != null ? collider2DRef.transform : transform;
-                        bool onCharacter = target.GetComponent<Character>() != null;
-                        bool onSpriteEngine = target.GetComponent<TwoBitMachines.TwoBitSprite.SpriteEngineBase>() != null;
-                        bool canScaleTarget = !onCharacter && !onSpriteEngine;
+                        Transform hit = collider2DRef != null ? collider2DRef.transform : transform;
+                        restLocalX = hit.localPosition.x;
+                        restOffsetX = collider2DRef != null ? collider2DRef.offset.x : 0f;
+                        if (Mathf.Abs(restLocalX) < 0.0001f && Mathf.Abs(restOffsetX) < 0.0001f && collider2DRef != null)
+                        {
+                                if (collider2DRef is BoxCollider2D box)
+                                {
+                                        restOffsetX = Mathf.Abs(box.size.x) * 0.5f;
+                                }
+                                else if (collider2DRef is CapsuleCollider2D capsule)
+                                {
+                                        restOffsetX = Mathf.Abs(capsule.size.x) * 0.5f;
+                                }
+                                else if (collider2DRef is CircleCollider2D circle)
+                                {
+                                        restOffsetX = circle.radius;
+                                }
+                        }
+                        restCached = true;
+                }
 
+                private void ApplyHitboxFlip (float dir)
+                {
+                        if (collider2DRef == null)
+                        {
+                                return;
+                        }
+                        if (!restCached)
+                        {
+                                CacheHitboxRestPose();
+                        }
+
+                        Transform hit = collider2DRef.transform;
                         float parentSign = 1f;
-                        if (target.parent != null && target.parent.lossyScale.x < 0)
+                        if (hit.parent != null && hit.parent.lossyScale.x < 0)
                         {
                                 parentSign = -1f;
                         }
                         float localSign = dir * parentSign;
 
-                        Vector3 euler = target.localEulerAngles;
-                        if (canScaleTarget && Mathf.Abs(Mathf.DeltaAngle(euler.y, 0f)) > 0.01f)
+                        bool isBody = hit.GetComponent<Character>() != null
+                                      || hit.GetComponent<TwoBitMachines.TwoBitSprite.SpriteEngineBase>() != null;
+
+                        if (!isBody)
                         {
-                                target.localRotation = Quaternion.Euler(euler.x, 0f, euler.z);
+                                Vector3 lp = hit.localPosition;
+                                lp.x = Mathf.Abs(restLocalX) * localSign;
+                                hit.localPosition = lp;
                         }
 
-                        if (collider2DRef != null && Mathf.Abs(collider2DRef.offset.x) > 0.0001f)
-                        {
-                                Vector2 offset = collider2DRef.offset;
-                                offset.x = Mathf.Abs(offset.x) * localSign;
-                                collider2DRef.offset = offset;
-                                if (canScaleTarget)
-                                {
-                                        Vector3 ls = target.localScale;
-                                        target.localScale = new Vector3(Mathf.Abs(ls.x) < 0.0001f ? 1f : Mathf.Abs(ls.x), ls.y, ls.z);
-                                }
-                                return;
-                        }
-
-                        if (!canScaleTarget)
-                        {
-                                return;
-                        }
-
-                        // Offset is ~0 (centered). Attack shapes in this project are drawn on the left,
-                        // so invert local scale after parent ScaleX so facing right still lands on the right.
-                        Vector3 scale = target.localScale;
-                        float absX = Mathf.Abs(scale.x);
-                        if (absX < 0.0001f)
-                        {
-                                absX = 1f;
-                        }
-                        target.localScale = new Vector3(absX * -localSign, scale.y, scale.z);
+                        Vector2 offset = collider2DRef.offset;
+                        offset.x = Mathf.Abs(restOffsetX) * (isBody ? dir : localSign);
+                        collider2DRef.offset = offset;
                 }
 
                 public void UnlockAll ()
