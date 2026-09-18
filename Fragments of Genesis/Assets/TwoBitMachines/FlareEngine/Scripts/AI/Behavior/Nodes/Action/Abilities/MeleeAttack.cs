@@ -22,7 +22,11 @@ namespace TwoBitMachines.FlareEngine.AI
 
                 [System.NonSerialized] private ContactFilter2D filter = new ContactFilter2D();
                 [System.NonSerialized] private List<Collider2D> list = new List<Collider2D>();
+                [System.NonSerialized] private List<Transform> targetList = new List<Transform>();
                 [System.NonSerialized] private bool success = false;
+                [System.NonSerialized] private Animator fallbackAnimator;
+                [System.NonSerialized] private bool fallbackAnimationStarted;
+                [System.NonSerialized] private int fallbackAnimationHash;
 
                 public override NodeState RunNodeLogic (Root root)
                 {
@@ -33,9 +37,12 @@ namespace TwoBitMachines.FlareEngine.AI
                         if (nodeSetup == NodeSetup.NeedToInitialize)
                         {
                                 success = false;
+                                fallbackAnimationStarted = false;
+                                fallbackAnimationHash = Animator.StringToHash(animationSignal);
                                 filter.useLayerMask = true;
                                 filter.useTriggers = true;
                                 filter.layerMask = layer;
+                                targetList.Clear();
                                 if (enableCollider == MeleeCollider.EnableOnStart)
                                 {
                                         colliderRef.enabled = true;
@@ -45,6 +52,22 @@ namespace TwoBitMachines.FlareEngine.AI
                                         root.velocity.y = velocity.y;
                                         root.hasJumped = true;
                                 }
+
+                                // AnimationSignals only drive a Flare SpriteEngine. Some AI
+                                // prefabs (such as Dark Knight) use a regular child Animator
+                                // instead, so forward the configured signal to its trigger.
+                                if (root.signals.spriteEngine == null)
+                                {
+                                        fallbackAnimator = GetComponentInChildren<Animator>();
+                                        if (HasTrigger(fallbackAnimator, animationSignal))
+                                        {
+                                                fallbackAnimator.SetTrigger(fallbackAnimationHash);
+                                        }
+                                        else
+                                        {
+                                                fallbackAnimator = null;
+                                        }
+                                }
                         }
                         if (velocity.x != 0)
                         {
@@ -53,6 +76,8 @@ namespace TwoBitMachines.FlareEngine.AI
                         root.signals.Set("meleeCombo", true);
                         root.signals.Set(animationSignal, true);
 
+                        UpdateFallbackAnimator();
+
                         int size = colliderRef.OverlapCollider(filter, list);
                         for (int i = 0; i < size; i++)
                         {
@@ -60,11 +85,68 @@ namespace TwoBitMachines.FlareEngine.AI
                                         continue;
                                 float direction = colliderRef.transform.position.x < list[i].transform.position.x ? 1f : -1f;
                                 Vector2 newForceDirection = new Vector2(forceDirection.x * direction, forceDirection.y);
-                                Health.IncrementHealth(transform, list[i].transform, -damage, newForceDirection);
+                                Transform target = GetHealthTarget(list[i]);
+                                if (target != null && target != this.transform && !targetList.Contains(target))
+                                {
+                                        if (Health.IncrementHealth(transform, target, -damage, newForceDirection))
+                                        {
+                                                targetList.Add(target);
+                                        }
+                                }
                         }
 
                         FlipCollider(root.direction, colliderRef.transform);
                         return success ? NodeState.Success : NodeState.Running;
+                }
+
+                private void UpdateFallbackAnimator ()
+                {
+                        if (fallbackAnimator == null || success)
+                        {
+                                return;
+                        }
+
+                        AnimatorStateInfo state = fallbackAnimator.GetCurrentAnimatorStateInfo(0);
+                        bool isAttackState = state.shortNameHash == fallbackAnimationHash || state.fullPathHash == fallbackAnimationHash;
+                        if (isAttackState)
+                        {
+                                fallbackAnimationStarted = true;
+                        }
+                        else if (fallbackAnimationStarted && !fallbackAnimator.IsInTransition(0))
+                        {
+                                CompleteAttack();
+                        }
+                }
+
+                private static bool HasTrigger (Animator animator, string parameterName)
+                {
+                        if (animator == null || string.IsNullOrEmpty(parameterName))
+                        {
+                                return false;
+                        }
+
+                        foreach (AnimatorControllerParameter parameter in animator.parameters)
+                        {
+                                if (parameter.type == AnimatorControllerParameterType.Trigger && parameter.name == parameterName)
+                                {
+                                        return true;
+                                }
+                        }
+                        return false;
+                }
+
+                private Transform GetHealthTarget (Collider2D collider)
+                {
+                        if (collider == null)
+                        {
+                                return null;
+                        }
+                        if (Health.IsDamageable(collider.transform))
+                        {
+                                return collider.transform;
+                        }
+                        Health parentHealth = collider.GetComponentInParent<Health>();
+                        return parentHealth != null ? parentHealth.transform : null;
                 }
 
                 public void FlipCollider (float direction, Transform transform)
@@ -77,6 +159,7 @@ namespace TwoBitMachines.FlareEngine.AI
                 public void CompleteAttack ()
                 {
                         success = true;
+                        targetList.Clear();
                         if (colliderRef != null)
                                 colliderRef.enabled = false;
                 }

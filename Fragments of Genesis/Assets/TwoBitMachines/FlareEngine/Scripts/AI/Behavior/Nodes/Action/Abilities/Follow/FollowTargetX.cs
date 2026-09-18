@@ -40,7 +40,11 @@ namespace TwoBitMachines.FlareEngine.AI
                         float directionX = t.x < root.position.x ? -1f : 1f;
                         root.velocity.x = velocityX = Compute.Lerp(velocityX, directionX * speed, smooth);
 
-                        if ((t - root.position).sqrMagnitude <= radius * radius)
+                        // This action only moves along X, so its completion condition must
+                        // also ignore any vertical offset between the AI and its target.
+                        // Using the full 2D distance can leave the node Running forever when
+                        // the two characters use different pivot heights.
+                        if (Mathf.Abs(t.x - root.position.x) <= radius)
                         {
                                 return NodeState.Success;
                         }
