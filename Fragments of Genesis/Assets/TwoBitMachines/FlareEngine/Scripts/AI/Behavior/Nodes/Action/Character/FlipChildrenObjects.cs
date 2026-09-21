@@ -26,6 +26,8 @@ namespace TwoBitMachines.FlareEngine.AI
                         float sign = Mathf.Sign(root.direction);
                         if (root.velocity.x == 0)
                                 sign = oldSign;
+                        if (sign == 0)
+                                sign = 1f;
 
                         if (flipOn == FlipOn.SpriteDirection)
                         {
