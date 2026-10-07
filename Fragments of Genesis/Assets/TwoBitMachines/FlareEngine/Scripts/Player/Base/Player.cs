@@ -46,7 +46,7 @@ namespace TwoBitMachines.FlareEngine.ThePlayer
                         world.Initialize(transform);
                         signals.InitializeToSpriteEngine(transform);
                         abilities.Initialize(this, inputs, ability, this);
-                        
+                        PlayerHealthSetup.Ensure(gameObject);
                 }
 
                 public override void OnEnable ()

@@ -35,34 +35,13 @@ public class MeleeAnimationEventReceiver : MonoBehaviour
     {
         foreach (PlayerMelee playerMelee in FindObjectsOfType<PlayerMelee>(true))
         {
-            EnsurePlayerHealth(playerMelee.gameObject);
+            PlayerHealthSetup.Ensure(playerMelee.gameObject);
             if (playerMelee.GetComponent<MeleeAnimationEventReceiver>() == null)
             {
                 MeleeAnimationEventReceiver receiver = playerMelee.gameObject.AddComponent<MeleeAnimationEventReceiver>();
                 receiver.meleeAbility = playerMelee;
             }
         }
-    }
-
-    private static void EnsurePlayerHealth(GameObject player)
-    {
-        Health health = player.GetComponent<Health>();
-        if (health == null)
-        {
-            health = player.AddComponent<Health>();
-        }
-
-        health.isHealth = true;
-        health.variableName = "PlayerHealth";
-        health.minValue = 0f;
-        health.maxValue = 10f;
-        health.currentValue = Mathf.Clamp(health.currentValue, health.minValue, health.maxValue);
-        if (health.currentValue <= health.minValue)
-        {
-            health.currentValue = health.maxValue;
-        }
-        health.recoveryTime = 0.5f;
-        health.Register();
     }
 
     private void Awake()

@@ -13,18 +13,29 @@ namespace TwoBitMachines.FlareEngine.AI
                 }
                 public void OnTriggerEnter2D(Collider2D other)
                 {
-                        if (aiBase != null && !aiBase.damage.pauseDamage && !aiBase.damage.pauseDamageTimer && Compute.ContainsLayer(aiBase.damage.layer, other.gameObject.layer))
-                        {
-                                Health.IncrementHealth(transform, other.transform, -aiBase.damage.damage * difficulty, Damage.Direction(transform, other.transform, aiBase.damage.direction) * aiBase.damage.force);
-                        }
+                        TryDamage(other);
                 }
 
                 public void OnTriggerStay2D(Collider2D other)
                 {
-                        if (aiBase != null && !aiBase.damage.pauseDamage && !aiBase.damage.pauseDamageTimer && Compute.ContainsLayer(aiBase.damage.layer, other.gameObject.layer))
+                        TryDamage(other);
+                }
+
+                private void TryDamage(Collider2D other)
+                {
+                        if (aiBase == null || other == null || aiBase.damage.pauseDamage || aiBase.damage.pauseDamageTimer)
                         {
-                                Health.IncrementHealth(transform, other.transform, -aiBase.damage.damage * difficulty, Damage.Direction(transform, other.transform, aiBase.damage.direction) * aiBase.damage.force);
+                                return;
                         }
+                        if (!Compute.ContainsLayer(aiBase.damage.layer, other.gameObject.layer))
+                        {
+                                return;
+                        }
+                        if (!Health.IsDamageable(other.transform))
+                        {
+                                return;
+                        }
+                        Health.IncrementHealth(transform, other.transform, -aiBase.damage.damage * difficulty, Damage.Direction(transform, other.transform, aiBase.damage.direction) * aiBase.damage.force);
                 }
         }
 

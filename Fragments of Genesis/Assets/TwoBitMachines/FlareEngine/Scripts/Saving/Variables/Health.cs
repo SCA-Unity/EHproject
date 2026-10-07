@@ -149,6 +149,19 @@ namespace TwoBitMachines.FlareEngine
                         return false;
                 }
 
+                public static Health Get (Transform transform)
+                {
+                        if (transform == null)
+                        {
+                                return null;
+                        }
+                        if (health.TryGetValue(transform, out Health found) && found != null)
+                        {
+                                return found;
+                        }
+                        return transform.GetComponentInParent<Health>();
+                }
+
                 public static bool HitContactResults (Transform aggressor, List<Collider2D> contactResults, int hits, float damage, float damageForce, Vector2 origin)
                 {
                         bool hit = false;
@@ -168,41 +181,44 @@ namespace TwoBitMachines.FlareEngine
 
                 public static bool IncrementHealth (Transform from, Transform to, float amount, Vector2 direction)
                 {
-                        if (to != null && health.TryGetValue(to, out Health healthKey))
+                        Health healthKey = Get(to);
+                        if (healthKey == null)
                         {
-                                if (healthKey.character == null)
-                                {
-                                        healthKey.character = healthKey.gameObject.GetComponent<Character>();
-                                }
-                                if (healthKey.character != null)
-                                {
-                                        healthKey.characterDirectionX = healthKey.character.signals.characterDirection;
-                                }
-                                if (healthKey.readImpactOnly)
-                                {
-                                        healthKey.OnImpact(from, to, amount, direction);
-                                        return true; // return as a success
-                                }
-                                if (healthKey.Recovering() && Mathf.Abs(amount) < healthKey.maxValue) // bypass recovery with instant kill
-                                {
-                                        return false;
-                                }
-                                if (healthKey.hasShield && healthKey.ShieldActive(from, direction))
-                                {
-                                        return false;
-                                }
-                                if (amount < 0)
-                                {
-                                        healthKey.StartRecovery(); // damage is negative
-                                }
-                                return healthKey.IncrementValue(from, amount, direction) && !healthKey.block;
+                                return false;
                         }
-                        return false;
+
+                        if (healthKey.character == null)
+                        {
+                                healthKey.character = healthKey.gameObject.GetComponent<Character>();
+                        }
+                        if (healthKey.character != null)
+                        {
+                                healthKey.characterDirectionX = healthKey.character.signals.characterDirection;
+                        }
+                        if (healthKey.readImpactOnly)
+                        {
+                                healthKey.OnImpact(from, to, amount, direction);
+                                return true; // return as a success
+                        }
+                        if (healthKey.Recovering() && Mathf.Abs(amount) < healthKey.maxValue) // bypass recovery with instant kill
+                        {
+                                return false;
+                        }
+                        if (healthKey.hasShield && healthKey.ShieldActive(from, direction))
+                        {
+                                return false;
+                        }
+                        if (amount < 0)
+                        {
+                                healthKey.StartRecovery(); // damage is negative
+                        }
+                        return healthKey.IncrementValue(from, amount, direction) && !healthKey.block;
                 }
 
                 public static bool IsDamageable (Transform transform)
                 {
-                        return transform != null && health.TryGetValue(transform, out Health healthKey) && !healthKey.readImpactOnly;
+                        Health healthKey = Get(transform);
+                        return healthKey != null && !healthKey.readImpactOnly;
                 }
         }
 }
